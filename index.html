@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Challenge: 1-100 Levels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            font-family: 'Silkscreen', cursive;
+            background-color: #1e293b;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .game-container {
+            background: radial-gradient(circle, rgba(30,41,59,1) 0%, rgba(15,23,42,1) 100%);
+            border: 4px solid var(--primary);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        
+        .level-display {
+            background-color: rgba(15, 23, 42, 0.8);
+            border: 2px solid var(--secondary);
+        }
+        
+        .guess-btn {
+            transition: all 0.3s;
+        }
+        
+        .guess-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: rgba(59, 130, 246, 0.2);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 0.5s ease;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .celebration {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto max-w-4xl flex-grow">
+        <div class="game-container rounded-xl p-6 my-4">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                    Number Challenge
+                </h1>
+                <div class="level-display px-4 py-2 rounded-lg">
+                    <p class="text-sm text-gray-300">Level</p>
+                    <p class="text-2xl font-bold" id="levelDisplay">1</p>
+                </div>
+            </div>
+            
+            <div class="progress-bar w-full rounded-full mb-6">
+                <div class="progress-fill rounded-full" style="width: 1%;"></div>
+            </div>
+            
+            <div class="flex flex-col items-center justify-center py-8">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/6877c701-a441-4d5f-9e70-9db7a10e5ed1.png" alt="Digital neon numbers glowing with cyberpunk aesthetic" class="mb-8 rounded-lg" />
+                
+                <div class="w-full max-w-md bg-slate-800 p-6 rounded-lg mb-8">
+                    <p class="text-lg mb-4 text-center" id="gameMessage">Guess the number between 1-10</p>
+                    <p class="text-sm text-gray-400 mb-4 text-center" id="attemptsLeft">Attempts left: 5</p>
+                    
+                    <div class="flex flex-col space-y-4">
+                        <input type="number" id="userGuess" class="bg-slate-700 text-white px-4 py-3 rounded-lg border-2 border-slate-600 focus:border-blue-500 focus:outline-none text-center" min="1" max="10">
+                        <div class="flex space-x-4">
+                            <button id="guessBtn" class="guess-btn bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg flex-grow font-bold">
+                                Guess
+                            </button>
+                            <button id="hintBtn" class="guess-btn bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg" title="Get a hint">
+                                Hint
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="w-full max-w-md bg-slate-800 p-4 rounded-lg">
+                    <h3 class="text-lg font-bold mb-2 text-center">Previous Guesses</h3>
+                    <div id="guessHistory" class="flex flex-wrap gap-2 justify-center"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="levelCompleteModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-800 p-8 rounded-xl max-w-md w-full mx-4 text-center">
+                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b75792c5-f64a-4a20-a5a9-2b7c4273a78c.png" alt="Golden trophy with confetti explosion celebration background" class="mx-auto mb-6" />
+                <h2 class="text-3xl font-bold mb-4" id="levelCompleteTitle">Level Complete!</h2>
+                <p class="text-xl mb-6" id="levelCompleteMessage">You guessed the number in 3 attempts!</p>
+                <p class="text-sm text-gray-300 mb-6">Congratulations! Get ready for the next challenge.</p>
+                <button id="nextLevelBtn" class="bg-white text-blue-600 hover:bg-gray-200 px-6 py-3 rounded-lg font-bold w-full">
+                    Next Level
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="text-center text-gray-500 text-sm mt-8">
+        <p>Number Challenge © 2023 | Reach level 100 to win!</p>
+    </footer>
+
+    <script>
+        // Game state
+        let currentLevel = 1;
+        let targetNumber = 0;
+        let attemptsLeft = 0;
+        let maxAttempts = 0;
+        let minRange = 1;
+        let maxRange = 10;
+        let allGuesses = [];
+        
+        // DOM elements
+        const levelDisplay = document.getElementById('levelDisplay');
+        const gameMessage = document.getElementById('gameMessage');
+        const attemptsLeftDisplay = document.getElementById('attemptsLeft');
+        const userGuessInput = document.getElementById('userGuess');
+        const guessBtn = document.getElementById('guessBtn');
+        const hintBtn = document.getElementById('hintBtn');
+        const guessHistory = document.getElementById('guessHistory');
+        const progressFill = document.querySelector('.progress-fill');
+        const levelCompleteModal = document.getElementById('levelCompleteModal');
+        const levelCompleteTitle = document.getElementById('levelCompleteTitle');
+        const levelCompleteMessage = document.getElementById('levelCompleteMessage');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        
+        // Initialize the game
+        function initGame() {
+            allGuesses = [];
+            guessHistory.innerHTML = '';
+            
+            // Set difficulty based on level
+            if (currentLevel <= 20) {
+                maxAttempts = 6 - Math.floor(currentLevel / 5);
+                minRange = 1;
+                maxRange = 10 * Math.ceil(currentLevel / 10);
+            } else if (currentLevel <= 50) {
+                maxAttempts = 4 - Math.floor((currentLevel - 20) / 10);
+                minRange = 1;
+                maxRange = 20 + (currentLevel * 2);
+            } else {
+                maxAttempts = 3 - Math.floor((currentLevel - 50) / 25);
+                minRange = -50 + currentLevel;
+                maxRange = 100 + (currentLevel * 3);
+            }
+            
+            maxAttempts = Math.max(2, maxAttempts); // Minimum 2 attempts per level
+            
+            targetNumber = Math.floor(Math.random() * (maxRange - minRange + 1)) + minRange;
+            attemptsLeft = maxAttempts;
+            
+            // Update UI
+            levelDisplay.textContent = currentLevel;
+            gameMessage.textContent = `Guess the number between ${minRange}-${maxRange}`;
+            attemptsLeftDisplay.textContent = `Attempts left: ${attemptsLeft}`;
+            userGuessInput.min = minRange;
+            userGuessInput.max = maxRange;
+            userGuessInput.value = '';
+            userGuessInput.focus();
+            
+            // Update progress bar
+            const progressPercent = (currentLevel / 100) * 100;
+            progressFill.style.width = `${progressPercent}%`;
+            
+            // Special treatment for level 100
+            if (currentLevel === 100) {
+                document.querySelector('h1').classList.add('celebration');
+                gameMessage.textContent = "Final Challenge! Guess the number between 1-5000";
+                maxRange = 5000;
+                attemptsLeft = 10;
+                attemptsLeftDisplay.textContent = `Attempts left: ${attemptsLeft}`;
+            }
+        }
+        
+        // Check user's guess
+        function checkGuess() {
+            const userGuess = parseInt(userGuessInput.value);
+            
+            if (isNaN(userGuess) || userGuess < minRange || userGuess > maxRange) {
+                gameMessage.textContent = `Please enter a valid number between ${minRange}-${maxRange}`;
+                gameMessage.className = 'text-lg mb-4 text-center text-red-400';
+                return;
+            }
+            
+            allGuesses.push(userGuess);
+            
+            // Create a bubble for the guess
+            const guessBubble = document.createElement('div');
+            guessBubble.className = `px-3 py-1 rounded-full ${userGuess === targetNumber ? 'bg-green-500 text-white' : userGuess < targetNumber ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`;
+            guessBubble.textContent = userGuess;
+            guessHistory.appendChild(guessBubble);
+            
+            if (userGuess === targetNumber) {
+                // Correct guess
+                levelCompleteTitle.textContent = currentLevel === 100 ? "You Beat the Game!" : "Level Complete!";
+                levelCompleteMessage.textContent = currentLevel === 100 
+                    ? `You completed all 100 levels! You're a number guessing master!`
+                    : `You guessed the number in ${maxAttempts - attemptsLeft + 1} attempts!`;
+                levelCompleteModal.classList.remove('hidden');
+                if (currentLevel === 100) {
+                    nextLevelBtn.textContent = "Play Again";
+                }
+            } else {
+                // Wrong guess
+                attemptsLeft--;
+                attemptsLeftDisplay.textContent = `Attempts left: ${attemptsLeft}`;
+                
+                if (attemptsLeft === 0) {
+                    gameMessage.textContent = `Game Over! The number was ${targetNumber}.`;
+                    gameMessage.className = 'text-lg mb-4 text-center text-red-400';
+                    guessBtn.disabled = true;
+                    
+                    // Show restart button
+                    const restartBtn = document.createElement('button');
+                    restartBtn.className = 'guess-btn mt-4 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg';
+                    restartBtn.textContent = 'Try Again';
+                    restartBtn.onclick = () => {
+                        initGame();
+                        guessBtn.disabled = false;
+                    };
+                    gameMessage.parentNode.insertBefore(restartBtn, gameMessage.nextSibling);
+                } else {
+                    gameMessage.textContent = userGuess < targetNumber 
+                        ? 'Too low! Try a higher number' 
+                        : 'Too high! Try a lower number';
+                    gameMessage.className = userGuess < targetNumber 
+                        ? 'text-lg mb-4 text-center text-blue-400' 
+                        : 'text-lg mb-4 text-center text-yellow-400';
+                }
+            }
+            
+            userGuessInput.value = '';
+        }
+        
+        // Provide a hint
+        function provideHint() {
+            const factors = [];
+            for (let i = 1; i <= targetNumber; i++) {
+                if (targetNumber % i === 0) {
+                    factors.push(i);
+                }
+            }
+            
+            let hint = '';
+            if (attemptsLeft < maxAttempts / 2) {
+                // After half attempts, give a stronger hint
+                hint = `The number is ${targetNumber % 2 === 0 ? 'even' : 'odd'}.`;
+                
+                if (targetNumber > 10 && factors.length <= 2) {
+                    hint += " It's a prime number.";
+                } else if (factors.length > 2) {
+                    hint += ` It's divisible by ${factors[1]}.`;
+                }
+            } else {
+                // Early in the game, give a subtle hint
+                hint = `The number is between ${Math.max(minRange, targetNumber - 10)} and ${Math.min(maxRange, targetNumber + 10)}.`;
+            }
+            
+            gameMessage.textContent = hint;
+            gameMessage.className = 'text-lg mb-4 text-center text-emerald-400';
+            
+            // Disable hint button after use
+            hintBtn.disabled = true;
+            hintBtn.className = 'guess-btn bg-gray-500 text-white px-6 py-3 rounded-lg cursor-not-allowed';
+        }
+        
+        // Event listeners
+        guessBtn.addEventListener('click', checkGuess);
+        hintBtn.addEventListener('click', provideHint);
+        nextLevelBtn.addEventListener('click', () => {
+            levelCompleteModal.classList.add('hidden');
+            if (currentLevel === 100) {
+                currentLevel = 1;
+                document.querySelector('h1').classList.remove('celebration');
+            } else {
+                currentLevel++;
+            }
+            initGame();
+            hintBtn.disabled = false;
+            hintBtn.className = 'guess-btn bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg';
+        });
+        
+        userGuessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+        
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>
+
+
+</body>
+</html>
